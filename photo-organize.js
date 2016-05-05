@@ -11,8 +11,9 @@ const q = require('q');
 const winston = require('winston');
 const glob = require('glob');
 const path = require('path');
+const recursive = require('recursive-readdir');
 
-const validExtensions = ['jpg', 'jpeg'];
+const validExtensions = ['.jpg', '.jpeg'];
 
 var inputDir;
 var outputDir;
@@ -22,6 +23,7 @@ program
   .usage('<inputDir> <outputDir> [options]')
   .option('-d, --dry', 'Do not move or copy files, but show result')
   .option('-m, --move', 'Move, instead of copy, the files')
+  .option('-R, --recursive', 'Recurse the inputDir')
   .option('-v, --verbose', 'Increase chattiness')
   .parse(process.argv);
 
@@ -68,43 +70,61 @@ function processInput(inputDir, outputDir) {
     }
   );
 
-  fs.readdir(inputDir).then(function(files) {
-    _.forEach(_.filter(files, validFile), function(file) {
-      getDateFromExif(file)
-        .then(function(exifDate) {
-          let origFilePath = path.join(inputDir, file);
-
-          if (exifDate != null && exifDate.isValid()) {
-            date = exifDate;
-          } else {
-            date = moment(fs.statSync(origFilePath).mtime);
-          }
-
-          let subdirectoryName = date.format('YYYY_MM_DD');
-          let newFilePath = path.join(outputDir, subdirectoryName, file);
-
-          if (!program.dry) {
-            fs.stat(newFilePath).then(function(stats) {
-              winston.warn(`Cannot move or copy file ${origFilePath} to ${newFilePath} because the filename already exists`);
-            }, function(err) {
-              if (!program.move) {
-                fs.copy(origFilePath, newFilePath);
-              } else {
-                fs.rename(origFilePath, newFilePath);
-              }
-            });
-          }
-
-          console.log(`${origFilePath} -> ${newFilePath}`);
-        }, function(err) {
-          winston.error(err);
-        })
-        .then(null, function(err) {
-          winston.trace(err);
-        });
+  if (program.recursive) {
+    recursive(inputDir, function(err, files) {
+      if (err) {
+        winston.error(err);
+      }
+      processFiles(files);
     });
-  }, function(err) {
-    winston.error(err);
+  } else {
+    fs.readdir(inputDir).then(function(files) {
+      processFiles(_.map(files, function(file) {
+        return path.join(inputDir, file);
+      })
+    );
+    }, function(err) {
+      winston.error(err);
+    });
+  }
+}
+
+function processFiles(files) {
+  _.forEach(_.filter(files, validFile), function(file) {
+    getDateFromExif(file)
+      .then(function(exifDate) {
+        let origFilePath = path.resolve(file);
+        winston.debug('origFilePath: ' + origFilePath);
+        let date;
+
+        if (exifDate != null && exifDate.isValid()) {
+          date = exifDate;
+        } else {
+          date = moment(fs.statSync(origFilePath).mtime);
+        }
+
+        let datePath = path.join(date.year().toString(), moment.months()[date.month()]);
+        let newFilePath = path.join(outputDir, datePath, path.basename(origFilePath));
+        winston.debug('newFilePath: ' + newFilePath);
+        if (!program.dry) {
+          fs.stat(newFilePath).then(function(stats) {
+            winston.warn(`Cannot move or copy file ${origFilePath} to ${newFilePath} because the filename already exists`);
+          }, function(err) {
+            if (!program.move) {
+              fs.copy(origFilePath, newFilePath);
+            } else {
+              fs.rename(origFilePath, newFilePath);
+            }
+          });
+        }
+
+        console.log(`${origFilePath} -> ${newFilePath}`);
+      }, function(err) {
+        winston.debug(err);
+      })
+      .then(null, function(err) {
+        winston.error(err);
+      });
   });
 }
 
@@ -144,6 +164,6 @@ function getDateFromExif(file) {
  * @return {Boolean} true if the file is valid for processing, false otherwise
  */
 function validFile(file) {
-  let extension = file.substring(file.lastIndexOf('.') + 1); //+ 1 because we do not want the dot
+  let extension = path.extname(file);
   return _.includes(validExtensions, extension.toLowerCase());
 }
