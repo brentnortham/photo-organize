@@ -10,6 +10,7 @@ const moment = require('moment');
 const q = require('q');
 const winston = require('winston');
 const glob = require('glob');
+const path = require('path');
 
 const validExtensions = ['jpg', 'jpeg'];
 
@@ -67,50 +68,34 @@ function processInput(inputDir, outputDir) {
     }
   );
 
-  if (!_.endsWith(inputDir, '/')) {
-    inputDir += '/';
-  }
-
-  if (!_.endsWith(outputDir, '/')) {
-    outputDir += '/';
-  }
-
   fs.readdir(inputDir).then(function(files) {
     _.forEach(_.filter(files, validFile), function(file) {
       getDateFromExif(file)
         .then(function(exifDate) {
+          let origFilePath = path.join(inputDir, file);
+
           if (exifDate != null && exifDate.isValid()) {
             date = exifDate;
           } else {
-            date = moment(fs.statSync(inputDir + file).mtime);
+            date = moment(fs.statSync(origFilePath).mtime);
           }
 
-          let subdirectoryName = date.format('YYYY_MM_DD') + '/';
-          let origFilePath = inputDir + file;
-          let newFilePath = outputDir + subdirectoryName + file;
+          let subdirectoryName = date.format('YYYY_MM_DD');
+          let newFilePath = path.join(outputDir, subdirectoryName, file);
+
           if (!program.dry) {
-
             fs.stat(newFilePath).then(function(stats) {
-              if (!stats.isFile()) {
-                if (!program.move) {
-                  fs.copy(origFilePath, newFilePath);
-                } else {
-                  fs.rename(origFilePath, newFilePath);
-                }
-              } else {
-                winston.warn(`Cannot move or copy file ${origFilePath} to ${newFilePath} because the filename already exists`);
-              }
+              winston.warn(`Cannot move or copy file ${origFilePath} to ${newFilePath} because the filename already exists`);
             }, function(err) {
-              winston.debug(err);
+              if (!program.move) {
+                fs.copy(origFilePath, newFilePath);
+              } else {
+                fs.rename(origFilePath, newFilePath);
+              }
             });
-            if (!program.move) {
-              fs.copy(origFilePath, newFilePath);
-            } else {
-              fs.rename(origFilePath, newFilePath);
-            }
           }
 
-          console.log(`${inputDir + file} -> ${outputDir + subdirectoryName + file}`);
+          console.log(`${origFilePath} -> ${newFilePath}`);
         }, function(err) {
           winston.error(err);
         })

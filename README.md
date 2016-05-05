@@ -13,7 +13,7 @@ For this particular purpose, a day starts at 5am. This way late evening pictures
 
 > photo-organize [inputDir] [outputDir] [--dry]
 
-If the __directory__ is not provided, the current working directory is used.
+If the __inputDir__ is not provided, the current working directory is used.
 The __--dry__ option logs the changes without applying them.
 
 # Sources
