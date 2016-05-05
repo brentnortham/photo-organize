@@ -7,16 +7,15 @@ For this particular purpose, a day starts at 5am. This way late evening pictures
 
 # Install
 
-> npm install -g photo-organize
+> npm install -g "brentnortham/photo-organize"
 
 # Usage
 
-> photo-organize [directory] [--dry]
+> photo-organize [inputDir] [outputDir] [--dry]
 
 If the __directory__ is not provided, the current working directory is used.
 The __--dry__ option logs the changes without applying them.
 
 # Sources
 
-https://github.com/gabooh/photo-organize
-
+https://github.com/brentnortham/photo-organize
