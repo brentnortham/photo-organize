@@ -1,6 +1,6 @@
 {
   "name": "photo-organize",
-  "version": "1.1.1",
+  "version": "2.0.0",
   "description": "Organize your photographies into subdirectories based on exif date.",
   "keywords": [
     "photo",
@@ -14,23 +14,33 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/gabooh/photo-organize.git"
+    "url": "git+https://github.com/brentnortham/photo-organize.git"
   },
-  "author": "Gaël Beaudoin",
+  "author": {
+    "name": "Gaël Beaudoin"
+    },
+  "contributors": [
+    {
+      "name": "Brent Northam"
+    }
+  ],
   "license": "GPL-2.0",
   "bugs": {
-    "url": "https://github.com/gabooh/photo-organize/issues"
+    "url": "https://github.com/brentnortham/photo-organize/issues"
   },
-  "homepage": "https://github.com/gabooh/photo-organize#readme",
+  "homepage": "https://github.com/brentnortham/photo-organize#readme",
   "dependencies": {
-    "commander": "^2.8.1",
-    "exif": "^0.5",
-    "lodash": "^4.1",
-    "moment": "^2.10.3",
-    "q": "^1.4.1"
+    "commander": "^2.9.0",
+    "exif": "^0.6.0",
+    "fs-promise": "^0.5.0",
+    "glob": "^7.0.3",
+    "lodash": "^4.11.2",
+    "moment": "^2.13.0",
+    "q": "^1.4.1",
+    "winston": "^2.2.0"
   },
   "bin": "./photo-organize.js",
   "engines": {
-    "node": "4.2.6"
+    "node": "5.11.0"
   }
 }

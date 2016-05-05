@@ -1,0 +1,28 @@
+{
+  "esnext": true,
+  "preset": "google",
+  "maximumLineLength": 150,
+  "disallowSpacesInAnonymousFunctionExpression": null,
+  "disallowMultipleVarDecl": "exceptUndefined",
+  "disallowSpacesInFunctionExpression": null,
+  "requireCamelCaseOrUpperCaseIdentifiers":
+  {
+    "ignoreProperties": true
+  },
+  "jsDoc": {
+    "checkParamNames": true,
+    "requireParamTypes": true,
+    "checkRedundantParams": true,
+    "checkReturnTypes": true,
+    "checkRedundantReturns": true,
+    "requireReturnTypes": true,
+    "checkTypes": "capitalizedNativeCase",
+    "checkRedundantAccess": true,
+    "requireNewlineAfterDescription": true
+  },
+  "fileExtensions": [".js", ".jsx"],
+  "excludeFiles": [
+    "build/**",
+    "node_modules/**"
+  ]
+}
