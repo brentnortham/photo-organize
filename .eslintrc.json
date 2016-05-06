@@ -1,0 +1,91 @@
+{
+  "env": {
+    "node": true
+  },
+  "parserOptions": {
+    "ecmaVersion": 6
+  },
+  "extends": "eslint:recommended",
+  "rules": {
+    "indent": [
+      "error",
+      2
+    ],
+    "linebreak-style": [
+      "error",
+      "unix"
+    ],
+    "quotes": [
+      "error",
+      "single"
+    ],
+    "semi": [
+      "error",
+      "always"
+    ],
+    "no-unused-vars": [
+      "error", {
+        "varsIgnorePattern": "(should)",
+        "argsIgnorePattern": "(req|res|err|next)"
+      }
+    ],
+    "curly": "error",
+    "dot-location": [
+      "error",
+      "property"
+    ],
+    "dot-notation": "error",
+    "eqeqeq": "error",
+    "no-alert": "error",
+    "no-else-return": "error",
+    "no-eq-null": "error",
+    "no-eval": "error",
+    "no-extra-bind": "error",
+    "no-extra-label": "error",
+    "no-floating-decimal": "error",
+    "no-implicit-coercion": "error",
+    "no-implicit-globals": "error",
+    "no-implied-eval": "error",
+    "no-labels": "error",
+    "no-lone-blocks": "error",
+    "no-loop-func": "error",
+    "no-multi-spaces": "error",
+    "no-multi-str": "error",
+    "no-native-reassign": "error",
+    "no-new": "error",
+    "no-new-wrappers": "error",
+    "no-octal-escape": "error",
+    "no-param-reassign": "error",
+    "no-return-assign": "error",
+    "no-script-url": "error",
+    "no-self-compare": "error",
+    "no-sequences": "error",
+    "no-throw-literal": "error",
+    "no-unmodified-loop-condition": "error",
+    "no-useless-call": "error",
+    "no-useless-concat": "error",
+    "no-useless-escape": "error",
+    "no-void": "error",
+    "no-with": "error",
+    "radix": "error",
+    "vars-on-top": "error",
+    "wrap-iife": [
+      "error",
+      "inside"
+    ],
+    "yoda": "error",
+    "brace-style": "error",
+    "func-style": [
+      "error",
+      "declaration"
+    ],
+    "key-spacing": "error",
+    "new-parens": "error",
+    "newline-after-var": "error",
+    "newline-before-return": "error",
+    "newline-per-chained-call": "error",
+    "no-array-constructor": "error",
+    "no-bitwise": "error",
+    "no-lonely-if": "error"
+  }
+}

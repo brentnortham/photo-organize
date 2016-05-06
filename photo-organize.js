@@ -9,7 +9,6 @@ const Exif = require('exif').ExifImage;
 const moment = require('moment');
 const q = require('q');
 const winston = require('winston');
-const glob = require('glob');
 const path = require('path');
 const recursive = require('recursive-readdir');
 
@@ -52,7 +51,6 @@ processInput(inputDir, outputDir);
  * @param {String} inputDir the glob expression specifying the files to process
  */
 function processInput(inputDir, outputDir) {
-  let date = null;
 
   fs.stat(inputDir)
     .then(function(stat) {
@@ -61,16 +59,15 @@ function processInput(inputDir, outputDir) {
       }
     })
     .catch(function(err) {
-    winston.error(`'${inputDir}' is not valid : ${err}`);
-    process.exit(1);
-  });
+      winston.error(`'${inputDir}' is not valid : ${err}`);
+      process.exit(1);
+    });
 
   fs.ensureDir(outputDir)
     .catch(function(err) {
       winston.error(`'${outputDir}' is not valid : ${err}`);
       process.exit(1);
-    }
-  );
+    });
 
   if (program.recursive) {
     recursive(inputDir, function(err, files) {
@@ -87,8 +84,8 @@ function processInput(inputDir, outputDir) {
         }));
       })
     .catch(function(err) {
-        winston.error(err);
-      });
+      winston.error(err);
+    });
   }
 }
 
@@ -99,17 +96,18 @@ function processFiles(files) {
         let origFilePath = path.resolve(file);
         let date;
 
-        if (exifDate != null && exifDate.isValid()) {
+        if (exifDate !== null && exifDate.isValid()) {
           date = exifDate;
         } else {
           date = moment(fs.statSync(origFilePath).mtime);
         }
 
-        let datePath = path.join(date.year().toString(),  (date.month() + 1).toString() + ' - ' + moment.months()[date.month()]);
+        let datePath = path.join(date.year().toString(), (date.month() + 1).toString() + ' - ' + moment.months()[date.month()]);
         let newFilePath = path.join(outputDir, datePath, path.basename(origFilePath));
+
         if (!program.dry) {
           fs.stat(newFilePath)
-            .then(function(stats) {
+            .then(function() {
               winston.warn(`Cannot move or copy file ${origFilePath} to ${newFilePath} because the filename already exists`);
             })
             .catch(function(err) {
@@ -134,7 +132,7 @@ function processFiles(files) {
         }
 
       })
-        .catch(function(err) {
+      .catch(function(err) {
         winston.debug(err);
       });
   });
@@ -148,15 +146,18 @@ function processFiles(files) {
  */
 function getDateFromExif(file) {
   var deferred = q.defer();
+
   try {
     new Exif({
       image: inputDir + file
     }, function(error, exifData) {
       if (error) {
         deferred.resolve(null);
+
         return;
       }
       let dateString;
+
       if (exifData.exif.DateTimeOriginal !== undefined) {
         dateString = exifData.exif.DateTimeOriginal;
       } else if (exifData.exif.DateTime !== undefined) {
@@ -177,5 +178,6 @@ function getDateFromExif(file) {
  */
 function validFile(file) {
   let extension = path.extname(file);
+
   return _.includes(validExtensions, extension.toLowerCase());
 }
