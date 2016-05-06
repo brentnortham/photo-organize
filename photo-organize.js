@@ -54,17 +54,19 @@ processInput(inputDir, outputDir);
 function processInput(inputDir, outputDir) {
   let date = null;
 
-  fs.stat(inputDir).then(function(stat) {
-    if (!stat.isDirectory()) {
-      winston.error(`'${inputDir}' is not a directory`);
-    }
-  }, function(err) {
+  fs.stat(inputDir)
+    .then(function(stat) {
+      if (!stat.isDirectory()) {
+        winston.error(`'${inputDir}' is not a directory`);
+      }
+    })
+    .catch(function(err) {
     winston.error(`'${inputDir}' is not valid : ${err}`);
     process.exit(1);
   });
 
   fs.ensureDir(outputDir)
-    .then(function() {}, function(err) {
+    .catch(function(err) {
       winston.error(`'${outputDir}' is not valid : ${err}`);
       process.exit(1);
     }
@@ -78,14 +80,15 @@ function processInput(inputDir, outputDir) {
       processFiles(files);
     });
   } else {
-    fs.readdir(inputDir).then(function(files) {
-      processFiles(_.map(files, function(file) {
-        return path.join(inputDir, file);
+    fs.readdir(inputDir)
+      .then(function(files) {
+        processFiles(_.map(files, function(file) {
+          return path.join(inputDir, file);
+        }));
       })
-    );
-    }, function(err) {
-      winston.error(err);
-    });
+    .catch(function(err) {
+        winston.error(err);
+      });
   }
 }
 
@@ -94,7 +97,6 @@ function processFiles(files) {
     getDateFromExif(file)
       .then(function(exifDate) {
         let origFilePath = path.resolve(file);
-        winston.debug('origFilePath: ' + origFilePath);
         let date;
 
         if (exifDate != null && exifDate.isValid()) {
@@ -103,27 +105,37 @@ function processFiles(files) {
           date = moment(fs.statSync(origFilePath).mtime);
         }
 
-        let datePath = path.join(date.year().toString(), moment.months()[date.month()]);
+        let datePath = path.join(date.year().toString(),  (date.month() + 1).toString() + ' - ' + moment.months()[date.month()]);
         let newFilePath = path.join(outputDir, datePath, path.basename(origFilePath));
-        winston.debug('newFilePath: ' + newFilePath);
         if (!program.dry) {
-          fs.stat(newFilePath).then(function(stats) {
-            winston.warn(`Cannot move or copy file ${origFilePath} to ${newFilePath} because the filename already exists`);
-          }, function(err) {
-            if (!program.move) {
-              fs.copy(origFilePath, newFilePath);
-            } else {
-              fs.rename(origFilePath, newFilePath);
-            }
-          });
+          fs.stat(newFilePath)
+            .then(function(stats) {
+              winston.warn(`Cannot move or copy file ${origFilePath} to ${newFilePath} because the filename already exists`);
+            })
+            .catch(function(err) {
+              if (!program.move) {
+                fs.copy(origFilePath, newFilePath)
+                .then(function() {
+                  winston.info(`${origFilePath} copied to ${newFilePath}`);
+                })
+                .catch(function(err) {
+                  winston.error(`Error copying ${origFilePath}: ${err}`);
+                });
+              } else {
+                fs.rename(origFilePath, newFilePath)
+                  .then(function() {
+                    winston.error(`${origFilePath} moved to ${newFilePath}`);
+                  })
+                  .catch(function(err) {
+                    winston.log(`Error moving ${origFilePath}: ${err}`);
+                  });
+              }
+            });
         }
 
-        console.log(`${origFilePath} -> ${newFilePath}`);
-      }, function(err) {
-        winston.debug(err);
       })
-      .then(null, function(err) {
-        winston.error(err);
+        .catch(function(err) {
+        winston.debug(err);
       });
   });
 }
