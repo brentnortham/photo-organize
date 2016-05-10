@@ -8,6 +8,7 @@ const _ = require('lodash');
 const Exif = require('exif').ExifImage;
 const moment = require('moment');
 const q = require('q');
+const Promise = require('promise');
 const winston = require('winston');
 const path = require('path');
 const recursive = require('recursive-readdir');
@@ -16,6 +17,8 @@ const validExtensions = ['.jpg', '.jpeg'];
 
 var inputDir;
 var outputDir;
+
+winston.info(process.argv);
 
 program
   .version('0.0.1')
@@ -38,7 +41,6 @@ if (program.verbose) {
   winston.level = 'debug';
 }
 
-winston.info(`Processing directory '${inputDir}'`);
 if (program.dry) {
   winston.info('Dry option specified. File will not be output.');
 }
@@ -52,90 +54,96 @@ processInput(inputDir, outputDir);
  */
 function processInput(inputDir, outputDir) {
 
+  let readdir = fs.readdir;
+
+  if (program.recursive) {
+    readdir = Promise.denodeify(recursive);
+  }
+
   fs.stat(inputDir)
     .then(function(stat) {
       if (!stat.isDirectory()) {
         winston.error(`'${inputDir}' is not a directory`);
       }
     })
+    .then(function() {
+      fs.ensureDir(outputDir);
+    })
+    .then(function() {
+      fs.readdir(inputDir);
+    })
+    .then(function(files) {
+      perform(files);
+    })
+    .then(function(messages) {
+      winston.info('Done');
+      winston.info(messages);
+    })
+    .done()
     .catch(function(err) {
       winston.error(`'${inputDir}' is not valid : ${err}`);
       process.exit(1);
     });
-
-  fs.ensureDir(outputDir)
-    .catch(function(err) {
-      winston.error(`'${outputDir}' is not valid : ${err}`);
-      process.exit(1);
-    });
-
-  if (program.recursive) {
-    recursive(inputDir, function(err, files) {
-      if (err) {
-        winston.error(err);
-      }
-      processFiles(files);
-    });
-  } else {
-    fs.readdir(inputDir)
-      .then(function(files) {
-        processFiles(_.map(files, function(file) {
-          return path.join(inputDir, file);
-        }));
-      })
-    .catch(function(err) {
-      winston.error(err);
-    });
-  }
 }
 
-function processFiles(files) {
-  _.forEach(_.filter(files, validFile), function(file) {
-    getDateFromExif(file)
-      .then(function(exifDate) {
-        let origFilePath = path.resolve(file);
-        let date;
+function perform(files) {
+  return Promise.all(files.filter(validFile).forEach(process));
+}
 
-        if (exifDate !== null && exifDate.isValid()) {
-          date = exifDate;
-        } else {
-          date = moment(fs.statSync(origFilePath).mtime);
-        }
+function process(image) {
+  getDateFromExif(image)
+    .then(function(exifDate) {
+      let origFilePath = path.resolve(image);
+      let newFilePath = getNewFilePath(origFilePath, exifDate);
 
-        let datePath = path.join(date.year().toString(), (date.month() + 1).toString() + ' - ' + moment.months()[date.month()]);
-        let newFilePath = path.join(outputDir, datePath, path.basename(origFilePath));
-
-        if (!program.dry) {
-          fs.stat(newFilePath)
-            .then(function() {
-              winston.warn(`Cannot move or copy file ${origFilePath} to ${newFilePath} because the filename already exists`);
-            })
-            .catch(function(err) {
-              if (!program.move) {
-                fs.copy(origFilePath, newFilePath)
+      if (!program.dry) {
+        fs.stat(newFilePath)
+          .then(function() {
+            let warnMsg = `Cannot move or copy file ${origFilePath} to ${newFilePath} because the filename already exists`;
+            winston.warn(warnMsg);
+            return Promise.resolve(warnMsg);
+          }, function() {
+            if (!program.move) {
+              fs.copy(origFilePath, newFilePath)
+              .then(function() {
+                winston.info(`${origFilePath} copied to ${newFilePath}`);
+                return Promise.resolve(image);
+              }, function(err) {
+                let errMsg = `Error copying ${origFilePath}: ${err}`;
+                winston.error(errMsg);
+                return Promise.reject(errMsg);
+              });
+            } else {
+              fs.rename(origFilePath, newFilePath)
                 .then(function() {
-                  winston.info(`${origFilePath} copied to ${newFilePath}`);
-                })
-                .catch(function(err) {
-                  winston.error(`Error copying ${origFilePath}: ${err}`);
+                  winston.info(`${origFilePath} moved to ${newFilePath}`);
+                  return Promise.resolve(image);
+                }, function(err) {
+                  let errMsg = `Error moving ${origFilePath}: ${err}`;
+                  winston.error(errMsg);
+                  return Promise.reject(errMsg);
                 });
-              } else {
-                fs.rename(origFilePath, newFilePath)
-                  .then(function() {
-                    winston.error(`${origFilePath} moved to ${newFilePath}`);
-                  })
-                  .catch(function(err) {
-                    winston.log(`Error moving ${origFilePath}: ${err}`);
-                  });
-              }
-            });
-        }
+            }
+          })
+            .catch(function(err) {});
+      }
+    })
+    .catch(function(err) {
+      return Promise.reject(err);
+    });
+}
 
-      })
-      .catch(function(err) {
-        winston.debug(err);
-      });
-  });
+function getNewFilePath(origFilePath, exifDate) {
+  let date;
+
+  if (exifDate !== null && exifDate.isValid()) {
+    date = exifDate;
+  } else {
+    date = moment(fs.statSync(origFilePath).mtime);
+  }
+
+  let datePath = path.join(date.year().toString(), (date.month() + 1).toString() + ' - ' + moment.months()[date.month()]);
+  return path.join(outputDir, datePath, path.basename(origFilePath));
 }
 
 /**
@@ -145,7 +153,6 @@ function processFiles(files) {
  * @return {promise|*|Q.promise}
  */
 function getDateFromExif(file) {
-  var deferred = q.defer();
 
   try {
     new Exif({
